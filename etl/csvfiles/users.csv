@@ -1,0 +1,4 @@
+username, password, database
+scott, tiger, oracle
+sakila, mayor, mysql
+admin, sleeping, sqlserver

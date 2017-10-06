@@ -1,0 +1,10 @@
+user : vid
+pwd : vid
+db : viddb
+qry : select * from scott.emp
+csvfile : emp
+csvdir: csvfiles
+# email: vid.tho@gmail.com
+# esub: File created in
+# ebdy: file is created in
+
