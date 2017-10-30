@@ -17,8 +17,8 @@ Contents of ETL folder
 ### Matpotlib
 Contents of matpotlib folder
 
-| **Script name**		                 |  **Descripton**
----------------------------------------- |--------------------------------------------------------------------
-| basic_plots.py | Script to generate following charts <br /> - line chart [Figure_1.png] <br /> - bar chart [Figure_2.png] <br /> - histogram [Figure_3.png], [Figure_4.png] <br /> - scatter plot [Figure_5.png] <br /> - stack plot [Figure_6.png] <br /> - pie chart [Figure_7.png]
-| example.txt | data in csv format
-| file_plots.py | Script to get data from example.txt and plot chart [fileplot_1.png]
+| **Script name**		                 |  **Descripton**  |   **Plot Diagrams**   |
+---------------------------------------- |----------------- |-----------------------|
+| basic_plots.py | Script to generate following charts <br /> - line chart <br /> - bar chart <br /> - histogram  <br /> - scatter plot  <br /> - stack plot <br /> - pie chart | <br /> [Figure_1.png] <br /> [Figure_2.png] <br /> [Figure_3.png], [Figure_4.png] <br /> [Figure_5.png] <br />  [Figure_6.png] <br /> [Figure_7.png]|
+| example.txt | data in csv format| 
+| file_plots.py | Script to get data from example.txt and plot chart | [fileplot_1.png]
