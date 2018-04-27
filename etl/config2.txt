@@ -1,0 +1,10 @@
+user : vid
+pwd : vid
+db : viddb
+qry1 : select EMPNO, ENAME, JOB, MGR, HIREDATE, SAL, COMM, d.DEPTNO, DNAME , LOC FROM scott.EMP e, scott.dept d where e.deptno = d.deptno
+qry2 : select e.deptno, d.dname, count(1) emp_count from scott.EMP e, scott.dept d where e.deptno = d.deptno group by e.deptno, d.dname
+qry3 : select ename, job, sal from scott.EMP order by sal desc
+xlsfile : emp_stats
+xlsdir: xls
+
+
