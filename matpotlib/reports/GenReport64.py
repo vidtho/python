@@ -1,24 +1,34 @@
 #-------------------------------------------------------------------------------
-# Name:        GenReport
-# Purpose:     1. [openfiles] : Read the csv file and store data to individual dataframes
-#              2. [ca_linechrt]     : CPU capacity plot       from dlpx_prod_VMAX-analytics-cpu-aggregated.csv
-#              3. [na_linechrt]     : Network capacity plot   from dlpx_prod_VMAX-analytics-network-aggregated.csv
+# Name:     GenReport64
+# Purpose:  Create line , Scatter plots based on CPU, DISK, NFS details
+# Methods:     1. [openfiles]        Read the csv file and store data to individual dataframes
+#              2. [config_param]     initalize objects
+#              3. [chrt_details]     Add details to plot like xlabel, ylabel, legend, title etc
+#              4. [add_trendlines]   Create regression series
+#              5. [create_series]    Create pandas series object used for base plotting
+#              6. [capacity_cpu]     Plot CPU Capacity Report
+#              7. [capacity_network] Plot Network Capacity Report
+#              8. [nfs_iops]         Plot NFS IOPS Report
+#              9. [nfs_latency]      Plot NFS Latency Report
+#             10. [nfs_throughput]   Plot NFS Throughput Report
+#             11. [network_throughput] Plot Network Throughput Report
+#             12. [disk_latency]     Plot Disk Latency Report
+#             13. [disk_iops]        Plot Disk IOPS Report
+#             14. [disk_throughput]  Plot Disk Throughput Report
+#             15. [cpu_raw]          Plot CPU Utilization Report
 #
 # http://jonathansoma.com/lede/data-studio/matplotlib/list-all-fonts-available-in-matplotlib-plus-samples/
 # https://matplotlib.org/users/tight_layout_guide.html
 # http://jacksimpson.co/positioning-a-legend-outside-the-figure-with-matplotlib-and-python/
 # https://elitedatascience.com/python-seaborn-tutorial
-# http://ertycde1.blogspot.com/2012/04/python-matplotlibdatesdate2num.html
-# https://stackoverflow.com/questions/33544637/add-future-dates-to-plot-for-trendline
-# https://www.dataquest.io/blog/making-538-plots/
-# https://www.youtube.com/watch?v=uSB8UBrbMfk
-# https://chrisalbon.com/python/data_wrangling/pandas_join_merge_dataframe/
+# https://github.com/jarrekk/imgkit/blob/master/README.md
+# http://dmcritchie.mvps.org/excel/colors.htm
 #
 # Author:      Vidya Thotangare
 # Created:     Apr 28, 2018
-#
-# Library needed :
-# pandas, matplotlib, os,
+# 
+# Pre requisites:
+#    Libraries needed : pandas, matplotlib, os, numpy
 #-------------------------------------------------------------------------------
 import csv
 import os

@@ -1,8 +1,21 @@
 #-------------------------------------------------------------------------------
-# Name:        GenReport
-# Purpose:     1. [openfiles] : Read the csv file and store data to individual dataframes
-#              2. [ca_linechrt]     : CPU capacity plot       from dlpx_prod_VMAX-analytics-cpu-aggregated.csv
-#              3. [na_linechrt]     : Network capacity plot   from dlpx_prod_VMAX-analytics-network-aggregated.csv
+# Name:     GenReport
+# Purpose:  Create line , Scatter plots based on CPU, DISK, NFS details
+# Methods:     1. [openfiles]        Read the csv file and store data to individual dataframes
+#              2. [config_param]     initalize objects
+#              3. [chrt_details]     Add details to plot like xlabel, ylabel, legend, title etc
+#              4. [add_trendlines]   Create regression series
+#              5. [create_series]    Create pandas series object used for base plotting
+#              6. [capacity_cpu]     Plot CPU Capacity Report
+#              7. [capacity_network] Plot Network Capacity Report
+#              8. [nfs_iops]         Plot NFS IOPS Report
+#              9. [nfs_latency]      Plot NFS Latency Report
+#             10. [nfs_throughput]   Plot NFS Throughput Report
+#             11. [network_throughput] Plot Network Throughput Report
+#             12. [disk_latency]     Plot Disk Latency Report
+#             13. [disk_iops]        Plot Disk IOPS Report
+#             14. [disk_throughput]  Plot Disk Throughput Report
+#             15. [cpu_raw]          Plot CPU Utilization Report
 #
 # http://jonathansoma.com/lede/data-studio/matplotlib/list-all-fonts-available-in-matplotlib-plus-samples/
 # https://matplotlib.org/users/tight_layout_guide.html
@@ -14,25 +27,8 @@
 # Author:      Vidya Thotangare
 # Created:     Apr 28, 2018
 # 
-# Library needed :
-# pandas, matplotlib, os, 
-#dlpx_prod_VMAX-analytics-cpu-aggregated.csv	    Capacity_CPU.jpg
-#dlpx_prod_VMAX-analytics-cpu-raw.csv		        CPU.jpg
-#dlpx_prod_VMAX-analytics-disk-aggregated.csv
-#dlpx_prod_VMAX-analytics-disk-raw.csv		        DISK_Latency.jpg
-#dlpx_prod_VMAX-analytics-disk-raw.csv		        DISK_IOPS.jpg
-#dlpx_prod_VMAX-analytics-disk-raw.csv		        Disk_Throughput.jpg
-#dlpx_prod_VMAX-analytics-iscsi-aggregated.csv
-#dlpx_prod_VMAX-analytics-iscsi-raw.csv
-#dlpx_prod_VMAX-analytics-network-aggregated.csv	Capacity_Network.png
-#dlpx_prod_VMAX-analytics-network-raw.csv	        Network.jpg
-#dlpx_prod_VMAX-analytics-nfs-aggregated.csv
-#dlpx_prod_VMAX-analytics-nfs-raw.csv		        NFS_IOPS.png
-#dlpx_prod_VMAX-analytics-nfs-raw.csv		        NFS_Latency.jpg
-#dlpx_prod_VMAX-analytics-nfs-raw.csv		        NFS_Throughput.jpg
-#dlpx_prod_VMAX-analytics-tcp-aggregated.csv
-#dlpx_prod_VMAX-analytics-tcp-raw.csv
-#??						                            Cache_Hit.jpg
+# Pre requisites:
+#    Libraries needed : pandas, matplotlib, os, numpy
 #-------------------------------------------------------------------------------
 import csv
 import os
@@ -294,6 +290,7 @@ class GenReport:
     plt.plot(self.x1, self.p(self.x2), ls='-',color=self.lnrred, label='Linear(ops_write' )
 
     self.chrt_details(ax, plt, "DISK_IOPS.png", "Date", "Disk IOPS", "Disk IOPS from the Delphix Engine to the Storage")
+
 
   def disk_throughput(self, df):
     sr = self.create_series(df[['#timestamp', 'read_throughput']])
