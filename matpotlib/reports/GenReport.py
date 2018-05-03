@@ -53,6 +53,7 @@ class GenReport:
          # self.dfta = pd.DataFrame()
          self.dftr = pd.DataFrame()
          self.config_param()
+         self.disk = self.nfs = 0
          pd.set_option('mode.chained_assignment', None)
 
 
@@ -64,33 +65,42 @@ class GenReport:
            if file.endswith(".csv"):
                filename = os.path.join(csvdir, file)
                if file == "dlpx_prod_VMAX-analytics-cpu-aggregated.csv":
-			       self.dfca = pd.read_csv (filename)
-			       self.capacity_cpu(self.dfca)
+                   self.dfca = pd.read_csv (filename)
+                   self.capacity_cpu(self.dfca)
 
                if file == "dlpx_prod_VMAX-analytics-network-aggregated.csv":
-			       self.dfnta = pd.read_csv (filename)
-			       self.capacity_network(self.dfnta)
+                   self.dfnta = pd.read_csv (filename)
+                   self.capacity_network(self.dfnta)
 
                if file == "dlpx_prod_VMAX-analytics-nfs-raw.csv":
-			       self.dfnfr = pd.read_csv (filename)
-			       self.nfs_iops(self.dfnfr)
-			       self.nfs_latency(self.dfnfr)
-			       self.nfs_throughput(self.dfnfr)
+                   self.dfnfr = pd.read_csv (filename)
+                   file = os.path.join(csvdir, 'dlpx_prod_VMAX-analytics-nfs-aggregated.csv')
+                   maxval = self.maxval_df(file, 'latency_w_85pct')
+                   self.nfs_latency(self.dfnfr, maxval)
+                   self.nfs_iops(self.dfnfr)
+                   self.nfs_throughput(self.dfnfr)
+                   self.nfs = 1
 
                if file == "dlpx_prod_VMAX-analytics-network-raw.csv":
-			       self.dfntr = pd.read_csv (filename)
-			       self.network_throughput(self.dfntr)
+                   self.dfntr = pd.read_csv (filename)
+                   self.network_throughput(self.dfntr)
 
                if file == "dlpx_prod_VMAX-analytics-disk-raw.csv":
-			       self.dfdr = pd.read_csv (filename)
-			       self.disk_latency(self.dfdr)
-			       self.disk_iops(self.dfdr)
-			       self.disk_throughput(self.dfdr)
+                   self.dfdr = pd.read_csv (filename)
+                   file = os.path.join(csvdir, 'dlpx_prod_VMAX-analytics-disk-aggregated.csv')
+                   maxval = self.maxval_df(file, 'latency_r_85pct')
+                   self.disk_latency(self.dfdr, maxval)
+                   self.disk_iops(self.dfdr)
+                   self.disk_throughput(self.dfdr)
+                   self.disk = 1
 
                if file == "dlpx_prod_VMAX-analytics-cpu-raw.csv":
-			       self.dfcr = pd.read_csv (filename)
-			       self.cpu_raw(self.dfcr)
+                   self.dfcr = pd.read_csv (filename)
+                   self.cpu_raw(self.dfcr)
 
+    if (self.disk == 1) and (self.nfs == 1) :
+       filename = os.path.join(csvdir, 'dlpx_prod_VMAX-analytics-cache-hit-ratio.csv')
+       self.cache_hit_ratio(self.dfdr, self.dfnfr, filename)
 
 
   def config_param(self):
@@ -134,8 +144,18 @@ class GenReport:
     df[df.columns[0]] = pd.to_datetime(df[df.columns[0]])
     df[df.columns[1]] = df[df.columns[1]] / calc
     sr = pd.Series (df[df.columns[1]].values, index = df[df.columns[0]])
-    # print sr[0:5]
     return sr
+
+
+  def maxval_df(self, filename, column_name):
+    if os.path.exists(filename):
+        df = pd.DataFrame()
+        df = pd.read_csv (filename)
+        maxval = df[column_name].max() * 2
+    else:
+        maxval = -1
+    # print maxval
+    return maxval
 
 
   def capacity_cpu(self, df):
@@ -167,7 +187,7 @@ class GenReport:
     sr = self.create_series(df[['#timestamp', 'ops_read']])
     sw = self.create_series(df[['#timestamp', 'ops_write']])
 
-    plt.rcParams['figure.figsize'] = (6, 6)
+    plt.rcParams['figure.figsize'] = (10,6)
 
     fig = plt.figure()
     ax = plt.subplot(111)
@@ -183,18 +203,18 @@ class GenReport:
     self.chrt_details(ax, plt, "NFS_IOPS.png", "Date", "IOPS", "NFS Server operations per second")
 
 
-  def nfs_latency(self, df):
+  def nfs_latency(self, df, maxval):
     sr = self.create_series(df[['#timestamp', 'read_latency']])
     sw = self.create_series(df[['#timestamp', 'write_latency']])
 
-    # sr = sr.ix[sr <= 40]
-    # sw = sw.ix[sw <= 40]
+    sr = sr.ix[sr <= maxval]
+    sw = sw.ix[sw <= maxval]
 
-    plt.rcParams['figure.figsize'] = (6, 6)
+    plt.rcParams['figure.figsize'] = (10,6)
 
     fig = plt.figure()
     ax = plt.subplot(111)
-    plt.ylim(0,40)
+    # plt.ylim(0,40)
 
     sr.plot(figsize=(10,6), style = '.', color=self.pltblue, label='read_latency', ms=1.5, ax=ax) 
     sw.plot(figsize=(10,6), style = '.', color=self.pltred, label='write_latency', ms=2, ax=ax)
@@ -211,7 +231,7 @@ class GenReport:
     sr = self.create_series(df[['#timestamp', 'read_throughput']])
     sw = self.create_series(df[['#timestamp', 'write_throughput']])
 
-    plt.rcParams['figure.figsize'] = (6, 6)
+    plt.rcParams['figure.figsize'] = (10,6)
 
     fig = plt.figure()
     ax = plt.subplot(111)
@@ -232,7 +252,7 @@ class GenReport:
     sr = self.create_series(df[['#timestamp', 'inBytes']], inMB )
     sw = self.create_series(df[['#timestamp', 'outBytes']], inMB)
 
-    plt.rcParams['figure.figsize'] = (6, 6)
+    plt.rcParams['figure.figsize'] = (10,6)
 
     fig = plt.figure()
     ax = plt.subplot(111)
@@ -248,14 +268,14 @@ class GenReport:
     self.chrt_details(ax, plt, "Network.png", "Date", "Network Throughput(MBPS)", "Total VM Network Throughput from the Delphix Engine to all Sources/Targets")    
 
 
-  def disk_latency(self, df):
+  def disk_latency(self, df, maxval):
     sr = self.create_series(df[['#timestamp', 'read_latency']])
     sw = self.create_series(df[['#timestamp', 'write_latency']])
 
-    sr = sr.ix[sr <= 20]
-    sw = sw.ix[sw <= 20]
+    sr = sr.ix[sr <= maxval]
+    sw = sw.ix[sw <= maxval]
 
-    plt.rcParams['figure.figsize'] = (6, 6)
+    plt.rcParams['figure.figsize'] = (10,6)
 
     fig = plt.figure()
     ax = plt.subplot(111)
@@ -276,7 +296,7 @@ class GenReport:
     sr = self.create_series(df[['#timestamp', 'ops_read']])
     sw = self.create_series(df[['#timestamp', 'ops_write']])
 
-    plt.rcParams['figure.figsize'] = (6, 6)
+    plt.rcParams['figure.figsize'] = (10,6)
 
     fig = plt.figure()
     ax = plt.subplot(111)
@@ -296,7 +316,7 @@ class GenReport:
     sr = self.create_series(df[['#timestamp', 'read_throughput']])
     sw = self.create_series(df[['#timestamp', 'write_throughput']])
 
-    plt.rcParams['figure.figsize'] = (6, 6)
+    plt.rcParams['figure.figsize'] = (10,6)
 
     fig = plt.figure()
     ax = plt.subplot(111)
@@ -314,7 +334,7 @@ class GenReport:
 
   def cpu_raw(self, df):
     sr = self.create_series(df[['#timestamp', 'util']])
-    plt.rcParams['figure.figsize'] = (6, 6)
+    plt.rcParams['figure.figsize'] = (10,6)
 
     fig = plt.figure()
     ax = plt.subplot(111)
@@ -324,6 +344,34 @@ class GenReport:
     plt.plot(self.x1, self.p(self.x2), ls='-',color=self.lnrblue, label='Linear(util)' )
  
     self.chrt_details(ax, plt, "CPU.png", "Date", "CPU", "CPU Utilization")
+
+
+  def cache_hit_ratio (self, dfd, dfn, filename):
+    dfdsk = pd.DataFrame()
+    dfnfs = pd.DataFrame()
+    dfchr = pd.DataFrame()
+
+    dfdsk = dfd[['#timestamp', 'read_throughput']]
+    dfnfs = dfn[['#timestamp', 'read_throughput']]
+
+    dfchr = pd.merge(dfdsk, dfnfs, on='#timestamp', how='inner', suffixes=('_dsk', '_nfs'))
+    dfchr['cache_hit_ratio'] = 100 - ((dfchr['read_throughput_dsk']*100)/dfchr['read_throughput_nfs'])
+
+    dfchr = dfchr[(dfchr['read_throughput_dsk'] > 0) & (dfchr['read_throughput_nfs'] > 0) & (dfchr['cache_hit_ratio'] > 0)]
+    dfchr.to_csv(filename)
+
+    # Plotting============================================================
+    sr = self.create_series(dfchr[['#timestamp', 'cache_hit_ratio']])
+    plt.rcParams['figure.figsize'] = (10, 6)
+
+    fig = plt.figure()
+    ax = plt.subplot(111)
+
+    sr.plot(figsize=(10,6), style = '.', color=self.pltblue, label='Cache Hit Ratio', ms=1.5, ax=ax)
+    self.add_trendlines(sr)
+    plt.plot(self.x1, self.p(self.x2), ls='-',color=self.lnrblue, label='Linear(Cache Hit Ratio)' )
+
+    self.chrt_details(ax, plt, "Cache_Hit.png", "Date", "% Cash Hit", "Cache Hit Ratio for NFS Reads")
 
 
 if __name__ == "__main__":
