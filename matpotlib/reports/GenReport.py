@@ -32,9 +32,12 @@
 #-------------------------------------------------------------------------------
 import csv
 import os
+import math
+import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.ticker as ticker
 import numpy as np
 from datetime import datetime
 
@@ -60,6 +63,7 @@ class GenReport:
 
   def openfiles(self):
     csvdir = os.path.join(os.getcwd() , 'csv')
+    self.imgdir = os.path.join(os.getcwd() , 'output')
     for root,dirs,files in os.walk(csvdir):
         for file in files:
            if file.endswith(".csv"):
@@ -75,8 +79,8 @@ class GenReport:
                if file == "dlpx_prod_VMAX-analytics-nfs-raw.csv":
                    self.dfnfr = pd.read_csv (filename)
                    file = os.path.join(csvdir, 'dlpx_prod_VMAX-analytics-nfs-aggregated.csv')
-                   maxval = self.maxval_df(file, 'latency_w_85pct')
-                   self.nfs_latency(self.dfnfr, maxval)
+                   srlimit = self.remove_outliers(file, 'latency_w_85pct')
+                   self.nfs_latency(self.dfnfr, srlimit)
                    self.nfs_iops(self.dfnfr)
                    self.nfs_throughput(self.dfnfr)
                    self.nfs = 1
@@ -88,8 +92,8 @@ class GenReport:
                if file == "dlpx_prod_VMAX-analytics-disk-raw.csv":
                    self.dfdr = pd.read_csv (filename)
                    file = os.path.join(csvdir, 'dlpx_prod_VMAX-analytics-disk-aggregated.csv')
-                   maxval = self.maxval_df(file, 'latency_r_85pct')
-                   self.disk_latency(self.dfdr, maxval)
+                   srlimit = self.remove_outliers(file, 'latency_r_85pct')
+                   self.disk_latency(self.dfdr, srlimit)
                    self.disk_iops(self.dfdr)
                    self.disk_throughput(self.dfdr)
                    self.disk = 1
@@ -120,6 +124,7 @@ class GenReport:
   def chrt_details(self, ax, plt, filename, xlab, ylab, title):
     plt.xticks(rotation=60)    # x-axis rotated to 45 deg
     plt.gca().yaxis.grid(True) # enable horizontal gridlines
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b-%Y'))
     ax.set_xlabel(xlab, fontname=self.xlab_fn, fontsize=self.xlab_fs , fontweight=self.xlab_fb, color=self.xlab_fc)
     ax.set_ylabel(ylab, fontname=self.ylab_fn, fontsize=self.ylab_fs , fontweight=self.ylab_fb, color=self.ylab_fc)
     ax.set_title(title, fontname=self.title_fn, fontsize=self.title_fs , fontweight=self.title_fb, color=self.title_fc)
@@ -128,7 +133,8 @@ class GenReport:
     plt.tight_layout(pad=3, h_pad=2, w_pad=2, rect=None) # [64 bit adj] Does not work well ...legend gets cut
     # plt.subplots_adjust(left= 0.10, right = rightmrg) # [64 bit adj] New line to adjust above layout
     # plt.show() # See the output
-    plt.savefig(filename)
+    imgname = os.path.join(self.imgdir, filename)
+    plt.savefig(imgname)
 
 
   def add_trendlines(self, timeseries):
@@ -147,7 +153,7 @@ class GenReport:
     return sr
 
 
-  def maxval_df(self, filename, column_name):
+  def remove_outliers(self, filename, column_name):
     if os.path.exists(filename):
         df = pd.DataFrame()
         df = pd.read_csv (filename)
@@ -157,12 +163,21 @@ class GenReport:
     # print maxval
     return maxval
 
+  def ylimit(self, module, df, rng=10000 , calc=1 ):
+    maxval = (df.max())/calc
+    maxlimit = int(math.ceil(maxval / rng)) * rng
+    print module + '/maxval: ' + str(maxval)
+    print module + '/maxlimit: ' + str(maxlimit)
+    return maxlimit
 
   def capacity_cpu(self, df):
     plt.rcParams['figure.figsize'] = (10, 6)
+    thisfunc = sys._getframe().f_code.co_name
+    maxlimit = self.ylimit(thisfunc, df['utilization_max'], 100)
 
     fig = plt.figure()
     ax = plt.subplot(111)
+    plt.ylim(0,maxlimit)
 
     ax.plot(df['#time'],df['utilization_min'],label='utilization_min', color=self.pltblue)
     ax.plot(df['#time'],df['utilization_max'],label='utilization_max', color=self.pltred)
@@ -173,10 +188,12 @@ class GenReport:
 
   def capacity_network(self, df):
     plt.rcParams['figure.figsize'] = (10, 6)
+    thisfunc = sys._getframe().f_code.co_name
+    maxlimit = self.ylimit(thisfunc, df['outBytes_85pct'], 100, (1024*1024))
 
     fig = plt.figure()
     ax = plt.subplot(111)
-
+    plt.ylim(0,maxlimit)
     ax.plot(df['#time'],df['outBytes_85pct']/1024/1024,label='85% Reads in MB', color=self.pltblue)
     ax.plot(df['#time'],df['inBytes_85pct']/1024/1024,label='85% Writes in MB', color=self.pltred)
 
@@ -188,9 +205,12 @@ class GenReport:
     sw = self.create_series(df[['#timestamp', 'ops_write']])
 
     plt.rcParams['figure.figsize'] = (10,6)
+    thisfunc = sys._getframe().f_code.co_name
+    maxlimit = self.ylimit(thisfunc, sr)
 
     fig = plt.figure()
     ax = plt.subplot(111)
+    plt.ylim(0,maxlimit)
 
     sr.plot(figsize=(10,6), style = '.', color=self.pltblue, label='ops_read', ms=1.5, ax=ax) 
     sw.plot(figsize=(10,6), style = '.', color=self.pltred, label='ops_write', ms=2, ax=ax)
@@ -211,10 +231,12 @@ class GenReport:
     sw = sw.ix[sw <= maxval]
 
     plt.rcParams['figure.figsize'] = (10,6)
+    thisfunc = sys._getframe().f_code.co_name
+    maxlimit = self.ylimit(thisfunc, sr, 5)
 
     fig = plt.figure()
     ax = plt.subplot(111)
-    # plt.ylim(0,40)
+    plt.ylim(0,maxlimit)
 
     sr.plot(figsize=(10,6), style = '.', color=self.pltblue, label='read_latency', ms=1.5, ax=ax) 
     sw.plot(figsize=(10,6), style = '.', color=self.pltred, label='write_latency', ms=2, ax=ax)
@@ -232,9 +254,12 @@ class GenReport:
     sw = self.create_series(df[['#timestamp', 'write_throughput']])
 
     plt.rcParams['figure.figsize'] = (10,6)
+    thisfunc = sys._getframe().f_code.co_name
+    maxlimit = self.ylimit(thisfunc, sr, 200)
 
     fig = plt.figure()
     ax = plt.subplot(111)
+    plt.ylim(0,maxlimit)
 
     sr.plot(figsize=(10,6), style = '.', color=self.pltblue, label='read_throughput', ms=1.5, ax=ax) 
     sw.plot(figsize=(10,6), style = '.', color=self.pltred, label='write_throughput', ms=2, ax=ax)
@@ -249,13 +274,16 @@ class GenReport:
     
   def network_throughput(self, df):
     inMB = float(1024*1024)
-    sr = self.create_series(df[['#timestamp', 'inBytes']], inMB )
-    sw = self.create_series(df[['#timestamp', 'outBytes']], inMB)
+    sr = self.create_series(df[['#timestamp', 'outBytes']], inMB )
+    sw = self.create_series(df[['#timestamp', 'inBytes']], inMB)
 
     plt.rcParams['figure.figsize'] = (10,6)
+    thisfunc = sys._getframe().f_code.co_name
+    maxlimit = self.ylimit(thisfunc, sr, 200)
 
     fig = plt.figure()
     ax = plt.subplot(111)
+    plt.ylim(0,maxlimit)
 
     sr.plot(figsize=(10,6), style = '.', color=self.pltblue, label='Reads in MB', ms=1.5, ax=ax) 
     sw.plot(figsize=(10,6), style = '.', color=self.pltred, label='Writes in MB', ms=2, ax=ax)
@@ -279,7 +307,7 @@ class GenReport:
 
     fig = plt.figure()
     ax = plt.subplot(111)
-    # plt.ylim(0,25)
+    plt.ylim(0,maxval)
 
     sr.plot(figsize=(10,6), style = '.', color=self.pltblue, label='read_latency', ms=1.5, ax=ax) 
     sw.plot(figsize=(10,6), style = '.', color=self.pltred, label='write_latency', ms=2, ax=ax)
@@ -297,9 +325,12 @@ class GenReport:
     sw = self.create_series(df[['#timestamp', 'ops_write']])
 
     plt.rcParams['figure.figsize'] = (10,6)
+    thisfunc = sys._getframe().f_code.co_name
+    maxlimit = self.ylimit(thisfunc, sr)
 
     fig = plt.figure()
     ax = plt.subplot(111)
+    plt.ylim(0,maxlimit)
 
     sr.plot(figsize=(10,6), style = '.', color=self.pltblue, label='ops_read', ms=1.5, ax=ax) 
     sw.plot(figsize=(10,6), style = '.', color=self.pltred, label='ops_write', ms=2, ax=ax)
@@ -316,10 +347,14 @@ class GenReport:
     sr = self.create_series(df[['#timestamp', 'read_throughput']])
     sw = self.create_series(df[['#timestamp', 'write_throughput']])
 
+    tick_spacing = 100
     plt.rcParams['figure.figsize'] = (10,6)
+    thisfunc = sys._getframe().f_code.co_name
+    maxlimit = self.ylimit(thisfunc, sr, 100)
 
     fig = plt.figure()
     ax = plt.subplot(111)
+    plt.ylim(0,maxlimit)
 
     sr.plot(figsize=(10,6), style = '.', color=self.pltblue, label='read_throughput', ms=1.5, ax=ax) 
     sw.plot(figsize=(10,6), style = '.', color=self.pltred, label='write_throughput', ms=2, ax=ax)
@@ -329,15 +364,19 @@ class GenReport:
     self.add_trendlines(sw)
     plt.plot(self.x1, self.p(self.x2), ls='-',color=self.lnrred, label='Linear(write_throughput)' )
 
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
     self.chrt_details(ax, plt, "Disk_Throughput.png", "Date", "Throughput(MBPS)", "Disk Throughput from the Delphix Engine to the Storage")
 
 
   def cpu_raw(self, df):
     sr = self.create_series(df[['#timestamp', 'util']])
     plt.rcParams['figure.figsize'] = (10,6)
+    thisfunc = sys._getframe().f_code.co_name
+    maxlimit = self.ylimit(thisfunc, sr, 10)
 
     fig = plt.figure()
     ax = plt.subplot(111)
+    plt.ylim(0,maxlimit)
 
     sr.plot(figsize=(10,6), style = '.', color=self.pltblue, label='util', ms=1.5, ax=ax) 
     self.add_trendlines(sr)
@@ -358,14 +397,17 @@ class GenReport:
     dfchr['cache_hit_ratio'] = 100 - ((dfchr['read_throughput_dsk']*100)/dfchr['read_throughput_nfs'])
 
     dfchr = dfchr[(dfchr['read_throughput_dsk'] > 0) & (dfchr['read_throughput_nfs'] > 0) & (dfchr['cache_hit_ratio'] > 0)]
-    dfchr.to_csv(filename)
+    #dfchr.to_csv(filename)
 
     # Plotting============================================================
     sr = self.create_series(dfchr[['#timestamp', 'cache_hit_ratio']])
     plt.rcParams['figure.figsize'] = (10, 6)
+    thisfunc = sys._getframe().f_code.co_name
+    maxlimit = self.ylimit(thisfunc, sr, 20)
 
     fig = plt.figure()
     ax = plt.subplot(111)
+    plt.ylim(0,maxlimit)
 
     sr.plot(figsize=(10,6), style = '.', color=self.pltblue, label='Cache Hit Ratio', ms=1.5, ax=ax)
     self.add_trendlines(sr)
